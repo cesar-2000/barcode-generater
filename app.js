@@ -187,6 +187,8 @@ app.get('/test', function (req, res) {
 // });
 app.use(express.static(__dirname + '/dist/client'));
 
-app.listen('8080', function () {
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, function () {
     console.log('running on 3000...');
 });

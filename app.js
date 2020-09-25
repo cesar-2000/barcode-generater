@@ -7,7 +7,6 @@ var cors = require('cors');
 const csv = require('csvtojson');
 const bwipjs = require('bwip-js');
 var zip = require('express-zip');
-const path = require('path');
 
 var barcodeJson = []; // from csv file
 var barcodeFiles = []; // generate barcode as png file
@@ -42,8 +41,10 @@ var upload = multer({
 app.post('/upload', function (req, res) {
     console.log('csv file upload requesting...')
     barcodeJson = [];
-    var tempBarcodeJson = [];
 
+    // barcodeFiles.forEach(element => {
+    //     fs.unlinkSync(element.path); // Deleting the barcode png
+    // });
 
     upload(req, res, function (err) {
         if (err) {
@@ -58,40 +59,7 @@ app.post('/upload', function (req, res) {
         return csv()
             .fromString(csvDataString)
             .then(json => {
-                let filteredJSON = [];
-                // filter existing barcode
-                if (barcodeFiles.length) {
-                    json.forEach(element => {
-                        let fileName = element['type;value'].split(';') + '.png';
-                        let flag = true;
-
-                        console.log('filename>>>', fileName);
-
-                        barcodeFiles.every(barcode => {
-                            if (barcode.name === fileName) {
-                                flag = false;
-                                return false;
-                            }
-                        });
-
-                        if (flag) {
-                            filteredJSON.push(element)
-                        }
-                    });
-
-                    tempBarcodeJson = filteredJSON;
-                } else {
-                    tempBarcodeJson = json;
-                }
-
-                // remove duplicate barcode
-                var valueArr = tempBarcodeJson.map(function (item) { return item['type;value'] });
-                valueArr.some(function (item, idx) {
-                    if (valueArr.indexOf(item) == idx) {
-                        barcodeJson.push(tempBarcodeJson[idx]);
-                    }
-                });
-
+                barcodeJson = json;
                 console.log('barcodeJson>>>', barcodeJson)
                 return res.json({ error_code: 0, err_desc: null, message: "Uploaded successfully" });
             })
@@ -101,26 +69,11 @@ app.post('/upload', function (req, res) {
 
 app.get('/generate', function (req, res) {
     console.log('generating barcode is started...')
-
+    barcodeFiles = [];
     if (!barcodeJson.length) {
         res.json({ error_code: 1, err_desc: "Please upload csv file" });
         return;
     }
-
-    if (barcodeFiles.length) {
-        console.log('Deleting barcode images started...');
-        barcodeFiles.forEach(element => {
-            fs.unlink(element.path, function (err) {
-                if (err) return console.log('no such file or directory...', err);
-                console.log('File deleted..');
-            })
-            // fs.unlinkSync(element.path); // Deleting the barcode png
-        });
-        console.log('Deleting barcode images finished...');
-
-        barcodeFiles = [];
-    }
-
 
     barcodeJson.forEach((element, index) => {
         console.log(index, ' element>>>', element)
@@ -166,9 +119,7 @@ app.get('/download', function (req, res) {
     }
 
     console.log('barcodeFiles>>>', barcodeFiles);
-
-    res.zip(barcodeFiles)
-
+    res.zip(barcodeFiles);
     console.log('download api is finished');
 });
 
@@ -180,12 +131,7 @@ app.get('/download', function (req, res) {
 app.get('/test', function (req, res) {
     console.log('test api is working');
     res.json({ error_code: 0, err_desc: null, message: "test api is working fine" });
-});
-
-// app.get('/*', function(req, res) {
-//     res.sendFile(path.join(__dirname, 'dist/client', 'index.html'));
-// });
-app.use(express.static(__dirname + '/dist/client'));
+})
 
 app.listen('3000', function () {
     console.log('running on 3000...');

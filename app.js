@@ -5,9 +5,12 @@ var multer = require('multer');
 var fs = require('fs');
 var cors = require('cors');
 const csv = require('csvtojson');
-const bwipjs = require('bwip-js');
+// const bwipjs = require('bwip-js');
 var zip = require('express-zip');
-const path = require('path');
+
+var JsBarcode = require('jsbarcode');
+var Canvas = require("canvas");
+var canvas = new Canvas.Canvas();
 
 var barcodeJson = []; // from csv file
 var barcodeFiles = []; // generate barcode as png file
@@ -132,24 +135,37 @@ app.get('/generate', function (req, res) {
             data = data.substr(1);
         }
 
-        bwipjs.toBuffer({
-            bcid: type,       // Barcode type
-            text: data,    // Text to encode
-            scale: 3,               // 3x scaling factor
-            height: 10,              // Bar height, in millimeters
-            includetext: true,
-            textxalign: 'center',
-        })
-            .then(png => {
-                var filePath = `./barcodes/${data}.png`;
-                fs.writeFileSync(filePath, png);
-                barcodeFiles.push({ path: filePath, name: `${data}.png` });
-            })
-            .catch(err => {
-                console.log('generate barcode error>>', err)
-                res.json({ error_code: 1, err_desc: err });
-                return;
-            });
+        // Using JSBarcode npm package
+        JsBarcode(canvas, data, {
+            format: type,
+            displayValue: true
+        });
+
+        const buffer = canvas.toBuffer('image/png');
+
+        var filePath = `./barcodes/${data}.png`;
+        fs.writeFileSync(filePath, buffer);
+        barcodeFiles.push({ path: filePath, name: `${data}.png` });
+
+
+        // bwipjs.toBuffer({
+        //     bcid: type,       // Barcode type
+        //     text: data,    // Text to encode
+        //     scale: 3,               // 3x scaling factor
+        //     height: 10,              // Bar height, in millimeters
+        //     includetext: true,
+        //     textxalign: 'center',
+        // })
+        //     .then(png => {
+        //         var filePath = `./barcodes/${data}.png`;
+        //         fs.writeFileSync(filePath, png);
+        //         barcodeFiles.push({ path: filePath, name: `${data}.png` });
+        //     })
+        //     .catch(err => {
+        //         console.log('generate barcode error>>', err)
+        //         res.json({ error_code: 1, err_desc: err });
+        //         return;
+        //     });
 
     });
 
@@ -172,23 +188,31 @@ app.get('/download', function (req, res) {
     console.log('download api is finished');
 });
 
-// app.get('/', function (req, res) {
-//     console.log('api is working fine...')
-//     res.sendFile(__dirname + "/index.html");
-// });
+app.get('/', function (req, res) {
+    // console.log('api is working fine...')
+
+    // var canvas = new Canvas.Canvas();
+
+    // JsBarcode(canvas, "0088407977804", {
+    //     format: "ean13",
+    //     displayValue: true
+    // });
+    // console.log('canvasssss', canvas)
+
+    // const buffer = canvas.toBuffer('image/png')
+    // fs.writeFileSync('./image.png', buffer)
+
+    // res.sendFile(__dirname + "/index.html");
+    
+});
 
 app.get('/test', function (req, res) {
     console.log('test api is working');
     res.json({ error_code: 0, err_desc: null, message: "test api is working fine" });
-});
+})
 
-// app.get('/*', function(req, res) {
-//     res.sendFile(path.join(__dirname, 'dist/client', 'index.html'));
-// });
 app.use(express.static(__dirname + '/dist/client'));
 
-//const PORT = process.env.PORT || 8080;
-
-app.listen(8080, function () {
+app.listen('8080', function () {
     console.log('running on 3000...');
 });
